@@ -61,15 +61,36 @@ a{color:var(--r);text-decoration:none}
 .t-yellow{background:rgba(250,204,21,.08);color:#facc15;border:1px solid rgba(250,204,21,.15)}
 .t-gray{background:rgba(255,255,255,.04);color:var(--t3);border:1px solid rgba(255,255,255,.08)}
 
-/* Samples */
+/* Sample Button */
 .s-btn{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--t3);background:none;border:1px solid var(--c2);border-radius:6px;padding:.3rem .7rem;cursor:pointer;margin-top:.6rem;transition:all .2s;letter-spacing:.5px}
 .s-btn:hover{color:var(--t1);border-color:var(--t3)}
-.s-list{display:none;margin-top:.6rem;max-height:280px;overflow-y:auto}
-.s-list.open{display:block}
-.s-row{font-family:'JetBrains Mono',monospace;font-size:.55rem;color:var(--t3);background:rgba(0,0,0,.25);padding:.3rem .5rem;border-radius:3px;margin-bottom:2px;word-break:break-all;line-height:1.5}
-.s-row .h{color:var(--r);font-weight:700}
-.s-list::-webkit-scrollbar{width:3px}
-.s-list::-webkit-scrollbar-thumb{background:var(--c2);border-radius:2px}
+
+/* Modal */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;justify-content:center;align-items:center;padding:1.5rem}
+.modal-bg.open{display:flex}
+.modal{background:var(--bg);border:1px solid var(--c2);border-radius:16px;width:95vw;max-width:1400px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden}
+.modal-head{display:flex;justify-content:space-between;align-items:center;padding:1.2rem 1.5rem;border-bottom:1px solid var(--c2);flex-shrink:0}
+.modal-head h3{font-size:1rem;font-weight:600}
+.modal-head h3 span{color:var(--t3);font-weight:400;font-size:.8rem;margin-left:.5rem}
+.modal-close{background:none;border:1px solid var(--c2);color:var(--t2);font-size:1.2rem;cursor:pointer;border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.modal-close:hover{color:var(--t1);border-color:var(--t3)}
+.modal-body{overflow:auto;padding:1rem 1.5rem 1.5rem;flex:1}
+.modal-hint{font-size:.7rem;color:var(--t3);margin-bottom:.8rem}
+.sg-wrap{overflow-x:auto;overflow-y:auto;max-height:calc(90vh - 120px)}
+.sg-wrap::-webkit-scrollbar{width:5px;height:5px}
+.sg-wrap::-webkit-scrollbar-thumb{background:var(--c2);border-radius:3px}
+.sg-wrap::-webkit-scrollbar-corner{background:transparent}
+.sg-table{border-collapse:collapse;direction:rtl}
+.sg-table tr{direction:ltr}
+.sg-table td,.sg-table th{font-family:'JetBrains Mono',monospace;font-size:.7rem;width:28px;min-width:28px;max-width:28px;height:26px;text-align:center;padding:0;border:1px solid rgba(255,255,255,.04)}
+.sg-table th{position:sticky;top:0;background:var(--c1);color:var(--t3);font-size:.5rem;font-weight:400;z-index:2;border-color:var(--c2)}
+.sg-table .rn{position:sticky;left:0;background:var(--c1);color:var(--t3);font-size:.55rem;font-weight:600;z-index:3;width:32px;min-width:32px;border-color:var(--c2);text-align:right;padding-right:6px}
+.sg-table th.rn{z-index:4}
+.sg-table .v0{color:rgba(255,255,255,.12)}
+.sg-table .vn{color:var(--t2)}
+.sg-table .vh{color:#fff;font-weight:700}
+.sg-table .vx{background:rgba(220,0,0,.15);color:#f87171;font-weight:700}
+.sg-table .empty{}
 
 /* Steps */
 .steps{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.8rem}
@@ -142,7 +163,7 @@ footer strong{color:var(--t2)}
 <div class="sec reveal">
 <div class="sec-label">Results</div>
 <div class="sec-title">8 Customer Segments</div>
-<div class="sec-desc">คลิก "samples" เพื่อดู purchase array ตัวอย่าง 20 คนของแต่ละกลุ่ม</div>
+<div class="sec-desc">คลิก "show 20 samples" เพื่อดูตารางการซื้อตัวอย่าง — งวดสุดท้ายจัดชิดขวาตรงกันทุกแถว</div>
 <div class="cgrid" id="cg"></div>
 </div>
 
@@ -175,6 +196,20 @@ footer strong{color:var(--t2)}
 </div>
 
 <footer><strong>Churn Customer Analysis</strong> — K-Means Clustering · 296,351 Customers · 64 Rounds · 11 Features</footer>
+</div>
+
+<!-- Sample Modal -->
+<div class="modal-bg" id="sampleModal">
+<div class="modal">
+<div class="modal-head">
+<h3 id="modalTitle">Cluster 0<span id="modalSub"></span></h3>
+<button class="modal-close" onclick="closeModal()">&times;</button>
+</div>
+<div class="modal-body">
+<div class="modal-hint">← scroll ซ้ายเพื่อดูงวดเก่า | งวดขวาสุด = งวดสุดท้ายที่ซื้อ (2026-02-16) | ตัวเลขสีแดง = ค่าสูง</div>
+<div class="sg-wrap" id="sgWrap"></div>
+</div>
+</div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -273,21 +308,52 @@ new ResizeObserver(()=>{const w=wrap.clientWidth,h=wrap.clientHeight;cam.aspect=
 const g=document.getElementById('cg');
 META.forEach(m=>{
     const tc=m.tr.startsWith('-')?'color:#f87171':'';
-    const arrs=S[String(m.id)]||[];
-    let sh='';
-    arrs.forEach((a,i)=>{
-        const f=a.map(v=>v>0?`<span class="h">${v}</span>`:v).join(',');
-        sh+=`<div class="s-row">${String(i+1).padStart(2,'0')}  [${f}]</div>`;
-    });
     const c=document.createElement('div');c.className='card';
     c.innerHTML=`<div class="card-top"><div><div class="card-id">Cluster ${m.id}</div><div class="card-name">${m.th}</div></div><div style="text-align:right"><div class="card-pct" style="color:${COLORS[m.id]}">${m.pct}</div><div class="card-cnt">${m.cnt} คน</div></div></div>
 <div class="card-row"><div class="card-kv"><div class="card-k">Tenure</div><div class="card-v">${m.te}</div></div><div class="card-kv"><div class="card-k">Avg Items</div><div class="card-v">${m.av}</div></div><div class="card-kv"><div class="card-k">Ratio</div><div class="card-v">${m.ra}</div></div><div class="card-kv"><div class="card-k">Trend</div><div class="card-v" style="${tc}">${m.tr}</div></div></div>
 <span class="card-tag ${m.tc}">${m.tg}</span>
-<button class="s-btn" onclick="this.nextElementSibling.classList.toggle('open');this.textContent=this.nextElementSibling.classList.contains('open')?'hide samples':'show 20 samples'">show 20 samples</button>
-<div class="s-list">${sh}</div>`;
+<button class="s-btn" onclick="openSampleModal(${m.id})">show 20 samples</button>`;
     g.appendChild(c);
 });
 })();
+
+// === SAMPLE MODAL ===
+function openSampleModal(cid){
+    const modal=document.getElementById('sampleModal');
+    const m=META.find(x=>x.id===cid);
+    document.getElementById('modalTitle').innerHTML=`Cluster ${cid} — ${m.th} <span>(${m.pct} · ${m.cnt} คน)</span>`;
+    const arrs=S[String(cid)]||[];
+    const maxLen=Math.max(...arrs.map(a=>a.length));
+    // Find threshold for "high" values in this cluster
+    const allVals=arrs.flat().filter(v=>v>0);
+    const thresh=allVals.length?allVals.sort((a,b)=>a-b)[Math.floor(allVals.length*0.85)]:10;
+
+    let html='<table class="sg-table"><thead><tr><th class="rn">#</th>';
+    // Column headers: round numbers from left (oldest) to right (newest = last round)
+    for(let i=maxLen;i>=1;i--) html+=`<th>R-${i}</th>`;
+    html+='</tr></thead><tbody>';
+    arrs.forEach((a,idx)=>{
+        html+='<tr><td class="rn">'+String(idx+1).padStart(2,'0')+'</td>';
+        // Pad left with empty cells so arrays right-align
+        const pad=maxLen-a.length;
+        for(let i=0;i<pad;i++) html+='<td class="empty"></td>';
+        a.forEach(v=>{
+            if(v===0) html+='<td class="v0">0</td>';
+            else if(v>=thresh) html+='<td class="vx">'+v+'</td>';
+            else html+='<td class="vn">'+v+'</td>';
+        });
+        html+='</tr>';
+    });
+    html+='</tbody></table>';
+    document.getElementById('sgWrap').innerHTML=html;
+    // Scroll to right (most recent rounds)
+    const wrap=document.getElementById('sgWrap');
+    modal.classList.add('open');
+    requestAnimationFrame(()=>{wrap.scrollLeft=wrap.scrollWidth;});
+}
+function closeModal(){document.getElementById('sampleModal').classList.remove('open');}
+document.getElementById('sampleModal').addEventListener('click',function(e){if(e.target===this)closeModal();});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeModal();});
 
 // Counter
 document.querySelectorAll('[data-c]').forEach(el=>{
