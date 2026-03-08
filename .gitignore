@@ -1,4 +1,5 @@
 *.csv
+*.pkl
 .claude/
 __pycache__/
 .ipynb_checkpoints/
