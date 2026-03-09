@@ -1586,50 +1586,55 @@ tr:hover td { background: #FEF5F4; transform: scale(1.005); }
 
 
 
+
 <div class="divider"></div>
 
-<!-- Slide 18: Customer Examples by Risk Level (randomized) -->
-<section class="slide" id="slide18">
+<!-- Slide 18: Customer Examples -->
+<section class="slide" id="slide18" style="background:#111;">
   <div class="slide-inner" style="width:100%; max-width:1200px;">
-    <span class="tag">SHAP + Purchase Pattern</span>
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-      <h2 style="margin:0;">ตัวอย่างลูกค้า &mdash; ทำไมถึงได้ Score นี้?</h2>
-      <button id="btn-shuffle" onclick="shuffleCustomers()" style="background:var(--red); color:#fff; border:none; padding:8px 18px; border-radius:8px; font-size:clamp(0.7rem,0.95vw,0.85rem); font-family:inherit; font-weight:600; cursor:pointer; transition:all 0.2s; box-shadow:0 3px 10px rgba(192,57,43,0.3);" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">&#8635; สุ่มตัวอย่างใหม่</button>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+      <div>
+        <span class="tag" style="background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2);">Explainability</span>
+      </div>
+      <button id="btn-shuffle" onclick="shuffleCustomers()" style="background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.15); padding:8px 20px; border-radius:20px; font-size:clamp(0.7rem,0.9vw,0.82rem); font-family:inherit; font-weight:500; cursor:pointer; transition:all 0.3s; backdrop-filter:blur(4px);" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">&#8635; Shuffle</button>
     </div>
-    <p style="text-align:center; color:#888; font-size:clamp(0.68rem,0.95vw,0.82rem); margin-bottom:12px;">
-      Purchase Pattern (30 งวดล่าสุด): <span style="color:#C0392B;">&#9632; ซื้อ</span> (เข้ม = เยอะ) | <span style="color:#ccc;">&#9632; ไม่ซื้อ</span> &nbsp;|&nbsp; SHAP: <span style="color:#E74C3C;">+ดัน Churn</span> / <span style="color:#3498DB;">&minus;รั้ง Churn</span>
+    <h2 style="color:#fff; font-size:clamp(1.3rem,2.5vw,1.8rem); font-weight:300; margin-bottom:4px;">Why did they get this score?</h2>
+    <p style="color:rgba(255,255,255,0.4); font-size:clamp(0.65rem,0.85vw,0.75rem); margin-bottom:20px;">
+      Each customer&#39;s top 3 factors &nbsp;&bull;&nbsp; Bar: purchase history (30 rounds) &nbsp;&bull;&nbsp; <span style="color:rgba(192,57,43,0.8);">&#9679;</span> bought &nbsp; <span style="color:rgba(255,255,255,0.15);">&#9679;</span> no purchase
     </p>
 
-    <div style="background:#1a1a1a; border-radius:14px; padding:14px 16px; margin-bottom:10px; border-left:5px solid #E74C3C;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <span style="font-size:clamp(0.9rem,1.3vw,1.1rem); font-weight:800; color:#E74C3C; text-transform:uppercase; letter-spacing:1px;">Critical</span>
-        <span style="font-size:clamp(0.6rem,0.8vw,0.7rem); color:rgba(255,255,255,0.6);">Score 76-100 | ติดต่อทันที</span>
+    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px;" id="risk-groups">
+      <div>
+        <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:10px;">
+          <span style="font-size:clamp(0.85rem,1.2vw,1rem); font-weight:700; color:#fff;">Critical</span>
+          <span style="font-size:clamp(0.5rem,0.65vw,0.58rem); color:rgba(255,255,255,0.3);">76&ndash;100</span>
+        </div>
+        <div id="cards-Critical" style="display:flex; flex-direction:column; gap:8px;"></div>
       </div>
-      <div id="cards-Critical" style="display:grid; grid-template-columns:repeat(2,1fr); gap:8px;"></div>
-    </div>
-    <div style="background:rgba(192,57,43,0.2); border-radius:14px; padding:14px 16px; margin-bottom:10px; border-left:5px solid #E67E22;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <span style="font-size:clamp(0.9rem,1.3vw,1.1rem); font-weight:800; color:#E67E22; text-transform:uppercase; letter-spacing:1px;">High</span>
-        <span style="font-size:clamp(0.6rem,0.8vw,0.7rem); color:rgba(255,255,255,0.6);">Score 51-75 | เร่งส่ง promotion</span>
+      <div>
+        <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:10px;">
+          <span style="font-size:clamp(0.85rem,1.2vw,1rem); font-weight:700; color:rgba(255,255,255,0.75);">High</span>
+          <span style="font-size:clamp(0.5rem,0.65vw,0.58rem); color:rgba(255,255,255,0.25);">51&ndash;75</span>
+        </div>
+        <div id="cards-High" style="display:flex; flex-direction:column; gap:8px;"></div>
       </div>
-      <div id="cards-High" style="display:grid; grid-template-columns:repeat(2,1fr); gap:8px;"></div>
-    </div>
-    <div style="background:rgba(192,57,43,0.1); border-radius:14px; padding:14px 16px; margin-bottom:10px; border-left:5px solid #F39C12;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <span style="font-size:clamp(0.9rem,1.3vw,1.1rem); font-weight:800; color:#F39C12; text-transform:uppercase; letter-spacing:1px;">Medium</span>
-        <span style="font-size:clamp(0.6rem,0.8vw,0.7rem); color:rgba(255,255,255,0.5);">Score 26-50 | ส่ง offer เบาๆ</span>
+      <div>
+        <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:10px;">
+          <span style="font-size:clamp(0.85rem,1.2vw,1rem); font-weight:700; color:rgba(255,255,255,0.50);">Medium</span>
+          <span style="font-size:clamp(0.5rem,0.65vw,0.58rem); color:rgba(255,255,255,0.2);">26&ndash;50</span>
+        </div>
+        <div id="cards-Medium" style="display:flex; flex-direction:column; gap:8px;"></div>
       </div>
-      <div id="cards-Medium" style="display:grid; grid-template-columns:repeat(2,1fr); gap:8px;"></div>
-    </div>
-    <div style="background:#e0dbd5; border-radius:14px; padding:14px 16px; margin-bottom:10px; border-left:5px solid #27AE60;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <span style="font-size:clamp(0.9rem,1.3vw,1.1rem); font-weight:800; color:#27AE60; text-transform:uppercase; letter-spacing:1px;">Low</span>
-        <span style="font-size:clamp(0.6rem,0.8vw,0.7rem); color:#888;">Score 0-25 | ลูกค้าภักดี</span>
+      <div>
+        <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:10px;">
+          <span style="font-size:clamp(0.85rem,1.2vw,1rem); font-weight:700; color:rgba(255,255,255,0.30);">Low</span>
+          <span style="font-size:clamp(0.5rem,0.65vw,0.58rem); color:rgba(255,255,255,0.15);">0&ndash;25</span>
+        </div>
+        <div id="cards-Low" style="display:flex; flex-direction:column; gap:8px;"></div>
       </div>
-      <div id="cards-Low" style="display:grid; grid-template-columns:repeat(2,1fr); gap:8px;"></div>
     </div>
   </div>
-  <span class="slide-num">18 / 19</span>
+  <span class="slide-num" style="color:rgba(255,255,255,0.3);">18 / 19</span>
 </section>
 
 <div class="divider"></div>
@@ -1797,27 +1802,32 @@ const levelColors = {Critical:'#E74C3C', High:'#E67E22', Medium:'#F39C12', Low:'
 function makeBar(last30) {
   return last30.map(v => {
     if (v > 0) {
-      const op = Math.min(0.4 + (v/20)*0.6, 1.0).toFixed(2);
-      return `<div title="${v} ใบ" style="flex:1;height:100%;background:rgba(192,57,43,${op});border-right:1px solid #fff;"></div>`;
+      const op = Math.min(0.35 + (v/15)*0.65, 1.0).toFixed(2);
+      return `<div title="${v} ใบ" style="flex:1;height:100%;background:rgba(192,57,43,${op});border-right:1px solid rgba(0,0,0,0.3);"></div>`;
     }
-    return `<div title="ไม่ซื้อ" style="flex:1;height:100%;background:#f0f0f0;border-right:1px solid #fff;"></div>`;
+    return `<div title="ไม่ซื้อ" style="flex:1;height:100%;background:rgba(255,255,255,0.04);border-right:1px solid rgba(0,0,0,0.3);"></div>`;
   }).join('');
 }
 
 function makeCard(c, level) {
-  const color = levelColors[level];
   const bar = makeBar(c.last30);
   const reasons = c.reasons.map((r, i) => {
     const sign = r.shap > 0 ? '+' : '';
-    const ac = r.shap > 0 ? '#E74C3C' : '#3498DB';
-    return `<div style="margin-bottom:2px;">${i+1}. ${r.th} = ${r.value} <span style="color:${ac};font-weight:600;">→ ${sign}${r.shap}</span></div>`;
+    const col = r.shap > 0 ? '#ef6b5a' : '#5ba0d6';
+    return `<div style="display:flex; justify-content:space-between; font-size:clamp(0.52rem,0.7vw,0.62rem); padding:2px 0; border-bottom:1px solid rgba(255,255,255,0.04);">
+      <span style="color:rgba(255,255,255,0.55);">${r.th}</span>
+      <span style="color:${col}; font-weight:600; white-space:nowrap; margin-left:6px;">${sign}${r.shap}</span>
+    </div>`;
   }).join('');
   
-  return `<div style="background:#fff;border-radius:10px;padding:10px 12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
-    <div style="margin-bottom:4px;"><span style="font-size:clamp(0.75rem,1vw,0.9rem);color:#222;font-weight:700;">${c.id}</span> <span style="font-size:clamp(0.75rem,1vw,0.9rem);color:${color};font-weight:800;">(Score: ${c.score})</span></div>
-    <div style="display:flex;height:12px;border-radius:3px;overflow:hidden;border:1px solid #e8e8e8;margin-bottom:6px;">${bar}</div>
-    <div style="font-size:clamp(0.55rem,0.75vw,0.65rem);color:#888;margin-bottom:4px;">Active ${c.active}/${c.rounds} | Last 6: ${c.last6}/6</div>
-    <div style="font-size:clamp(0.58rem,0.78vw,0.68rem);color:#555;line-height:1.5;">${reasons}</div>
+  return `<div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:12px; backdrop-filter:blur(4px); transition:all 0.3s;" onmouseover="this.style.background='rgba(255,255,255,0.09)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+      <span style="font-size:clamp(0.65rem,0.85vw,0.75rem); color:rgba(255,255,255,0.8); font-weight:600; font-family:monospace;">${c.id}</span>
+      <span style="font-size:clamp(0.8rem,1.1vw,0.95rem); font-weight:800; color:#fff;">${c.score}</span>
+    </div>
+    <div style="display:flex; height:6px; border-radius:3px; overflow:hidden; margin-bottom:8px; background:rgba(255,255,255,0.06);">${bar}</div>
+    <div style="font-size:clamp(0.48rem,0.62vw,0.55rem); color:rgba(255,255,255,0.25); margin-bottom:6px;">Active ${c.active}/${c.rounds} &bull; Last 6: ${c.last6}/6</div>
+    ${reasons}
   </div>`;
 }
 
