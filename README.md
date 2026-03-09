@@ -110,24 +110,6 @@ Features are grouped into 7 categories derived from purchase history across 61 r
 
 ---
 
-## How to Run
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/natpaphonn-ctrl/ChurnCustomer.git
-cd ChurnCustomer
-
-# 2. Install dependencies
-pip install pandas numpy scikit-learn lightgbm xgboost shap matplotlib seaborn
-
-# 3. Run the notebook
-jupyter notebook churn_analysis.ipynb
-```
-
-**Data files required:** Place the CSV files (`Churn_*.csv`) in the project root before running.
-
----
-
 ## Project Structure
 
 ```
