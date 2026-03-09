@@ -1814,15 +1814,14 @@ function makeCard(c, level) {
   const reasons = c.reasons.map((r, i) => {
     const sign = r.shap > 0 ? '+' : '';
     const col = r.shap > 0 ? '#C0392B' : '#2980B9';
-    return `<div style="font-size:clamp(0.55rem,0.75vw,0.65rem); padding:3px 0; border-bottom:1px solid #f0f0f0;">
+    return `<div style="font-size:clamp(0.55rem,0.75vw,0.65rem); padding:3px 0;">
       <span style="color:#666;">${r.th}</span> <span style="color:${col}; font-weight:600;">${sign}${r.shap}</span>
     </div>`;
   }).join('');
   
   return `<div style="background:#fff; border:1px solid #eee; border-radius:12px; padding:14px; box-shadow:0 2px 12px rgba(0,0,0,0.04); transition:all 0.3s;" onmouseover="this.style.boxShadow='0 4px 20px rgba(0,0,0,0.08)'; this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='0 2px 12px rgba(0,0,0,0.04)'; this.style.transform='translateY(0)'">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-      <span style="font-size:clamp(0.7rem,0.9vw,0.8rem); color:#333; font-weight:600; font-family:monospace;">${c.id}</span>
-      <span style="font-size:clamp(0.85rem,1.15vw,1rem); font-weight:800; color:#C0392B;">${c.score}</span>
+    <div style="margin-bottom:8px;">
+      <span style="font-size:clamp(0.7rem,0.9vw,0.8rem); color:#333; font-weight:600; font-family:monospace;">${c.id}</span> <span style="font-size:clamp(0.65rem,0.85vw,0.75rem); font-weight:700; color:#C0392B;">(Score : ${c.score})</span>
     </div>
     <div style="display:flex; height:8px; border-radius:4px; overflow:hidden; margin-bottom:8px; background:#f5f5f5;">${bar}</div>
     <div style="font-size:clamp(0.5rem,0.65vw,0.58rem); color:#aaa; margin-bottom:6px;">Active ${c.active}/${c.rounds} &bull; Last 6: ${c.last6}/6</div>
