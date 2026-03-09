@@ -93,10 +93,10 @@ Features are grouped into 7 categories derived from purchase history across 61 r
 
 | File | Description |
 |------|-------------|
-| `Churn_RiskScore_0316.csv` | Risk scores for all 569,087 customers |
-| `Churn_RiskScore_Explained_0316.csv` | Risk scores + top 5 SHAP reasons per customer (29 columns) |
 | `charts/` | SHAP importance, beeswarm, waterfall, and risk-level comparison charts |
 | `presentation.html` | Interactive 19-slide presentation for stakeholders |
+
+> **Note:** Dataset and output CSV files are not included in this repository for data privacy.
 
 ---
 
@@ -117,12 +117,9 @@ ChurnCustomer/
 ├── churn_analysis.ipynb              # Main notebook (11 phases)
 ├── presentation.html                 # Interactive presentation
 ├── README.md
-├── charts/                           # Generated chart images
-│   ├── shap_importance.png
-│   ├── shap_beeswarm.png
-│   ├── shap_by_risk_level.png
-│   └── shap_waterfall_examples.png
-├── Churn_RiskScore_0316.csv          # Production risk scores
-├── Churn_RiskScore_Explained_0316.csv # Scores + SHAP explanations
-└── Churn_*_*.csv                     # Raw period data (6 files)
+└── charts/                           # Generated chart images
+    ├── shap_importance.png
+    ├── shap_beeswarm.png
+    ├── shap_by_risk_level.png
+    └── shap_waterfall_examples.png
 ```
