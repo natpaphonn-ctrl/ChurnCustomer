@@ -411,9 +411,40 @@ tr:hover td { background: #FEF5F4; transform: scale(1.005); }
   transform-style: preserve-3d;
   transition: transform 0.1s ease-out;
 }
+
+/* ===== LIGHTBOX ===== */
+.lightbox-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background: rgba(0,0,0,0.85);
+  z-index: 9999;
+  justify-content: center;
+  align-items: center;
+  cursor: zoom-out;
+}
+.lightbox-overlay.active { display: flex; }
+.lightbox-overlay img {
+  max-width: 92vw;
+  max-height: 92vh;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  animation: lightbox-in 0.3s ease;
+}
+@keyframes lightbox-in {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.chart-img img { cursor: zoom-in; }
 </style>
 </head>
 <body>
+
+
+<div class="lightbox-overlay" id="lightbox">
+  <img id="lightbox-img" src="" alt="Zoomed chart">
+</div>
 
 <nav id="dotnav">
   <a href="#slide1" data-slide="1"></a>
@@ -1732,6 +1763,22 @@ dots.forEach(dot => {
     const target = document.querySelector(dot.getAttribute('href'));
     if (target) target.scrollIntoView({ behavior: 'smooth' });
   });
+});
+
+// ===== Lightbox for chart images =====
+const lightbox = document.getElementById('lightbox');
+const lightboxImg = document.getElementById('lightbox-img');
+document.querySelectorAll('.chart-img img').forEach(img => {
+  img.addEventListener('click', () => {
+    lightboxImg.src = img.src;
+    lightbox.classList.add('active');
+  });
+});
+lightbox.addEventListener('click', () => {
+  lightbox.classList.remove('active');
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') lightbox.classList.remove('active');
 });
 </script>
 
