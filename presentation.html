@@ -1590,51 +1590,51 @@ tr:hover td { background: #FEF5F4; transform: scale(1.005); }
 <div class="divider"></div>
 
 <!-- Slide 18: Customer Examples -->
-<section class="slide" id="slide18" style="background:#111;">
+<section class="slide" id="slide18">
   <div class="slide-inner" style="width:100%; max-width:1200px;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
       <div>
-        <span class="tag" style="background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2);">Explainability</span>
+        <span class="tag" style="background:var(--red-light); color:var(--red);">Explainability</span>
       </div>
-      <button id="btn-shuffle" onclick="shuffleCustomers()" style="background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.15); padding:8px 20px; border-radius:20px; font-size:clamp(0.7rem,0.9vw,0.82rem); font-family:inherit; font-weight:500; cursor:pointer; transition:all 0.3s; backdrop-filter:blur(4px);" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">&#8635; Shuffle</button>
+      <button id="btn-shuffle" onclick="shuffleCustomers()" style="background:#fff; color:var(--red); border:2px solid var(--red); padding:8px 20px; border-radius:20px; font-size:clamp(0.7rem,0.9vw,0.82rem); font-family:inherit; font-weight:600; cursor:pointer; transition:all 0.3s;" onmouseover="this.style.background='var(--red)'; this.style.color='#fff'" onmouseout="this.style.background='#fff'; this.style.color='var(--red)'">&#8635; Shuffle</button>
     </div>
-    <h2 style="color:#fff; font-size:clamp(1.3rem,2.5vw,1.8rem); font-weight:300; margin-bottom:4px;">Why did they get this score?</h2>
-    <p style="color:rgba(255,255,255,0.4); font-size:clamp(0.65rem,0.85vw,0.75rem); margin-bottom:20px;">
-      Each customer&#39;s top 3 factors &nbsp;&bull;&nbsp; Bar: purchase history (30 rounds) &nbsp;&bull;&nbsp; <span style="color:rgba(192,57,43,0.8);">&#9679;</span> bought &nbsp; <span style="color:rgba(255,255,255,0.15);">&#9679;</span> no purchase
+    <h2 style="font-size:clamp(1.3rem,2.5vw,1.8rem); font-weight:300; margin-bottom:4px;">Why did they get this score?</h2>
+    <p style="color:#999; font-size:clamp(0.65rem,0.85vw,0.75rem); margin-bottom:20px;">
+      Each customer&#39;s top 3 factors &nbsp;&bull;&nbsp; Bar: purchase history (30 rounds) &nbsp;&bull;&nbsp; <span style="color:#C0392B;">&#9679;</span> bought &nbsp; <span style="color:#ddd;">&#9679;</span> no purchase
     </p>
 
     <div style="display:flex; flex-direction:column; gap:14px;" id="risk-groups">
       <div>
         <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:8px;">
-          <span style="font-size:clamp(0.85rem,1.2vw,1rem); font-weight:700; color:#fff;">Critical</span>
-          <span style="font-size:clamp(0.5rem,0.65vw,0.58rem); color:rgba(255,255,255,0.3);">76&ndash;100</span>
+          <span style="font-size:clamp(0.85rem,1.2vw,1rem); font-weight:700; color:#C0392B;">Critical</span>
+          <span style="font-size:clamp(0.5rem,0.65vw,0.58rem); color:#bbb;">76&ndash;100</span>
         </div>
         <div id="cards-Critical" style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px;"></div>
       </div>
       <div>
         <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:8px;">
-          <span style="font-size:clamp(0.85rem,1.2vw,1rem); font-weight:700; color:rgba(255,255,255,0.75);">High</span>
-          <span style="font-size:clamp(0.5rem,0.65vw,0.58rem); color:rgba(255,255,255,0.25);">51&ndash;75</span>
+          <span style="font-size:clamp(0.85rem,1.2vw,1rem); font-weight:700; color:#E67E22;">High</span>
+          <span style="font-size:clamp(0.5rem,0.65vw,0.58rem); color:#bbb;">51&ndash;75</span>
         </div>
         <div id="cards-High" style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px;"></div>
       </div>
       <div>
         <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:8px;">
-          <span style="font-size:clamp(0.85rem,1.2vw,1rem); font-weight:700; color:rgba(255,255,255,0.50);">Medium</span>
-          <span style="font-size:clamp(0.5rem,0.65vw,0.58rem); color:rgba(255,255,255,0.2);">26&ndash;50</span>
+          <span style="font-size:clamp(0.85rem,1.2vw,1rem); font-weight:700; color:#F39C12;">Medium</span>
+          <span style="font-size:clamp(0.5rem,0.65vw,0.58rem); color:#bbb;">26&ndash;50</span>
         </div>
         <div id="cards-Medium" style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px;"></div>
       </div>
       <div>
         <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:8px;">
-          <span style="font-size:clamp(0.85rem,1.2vw,1rem); font-weight:700; color:rgba(255,255,255,0.30);">Low</span>
-          <span style="font-size:clamp(0.5rem,0.65vw,0.58rem); color:rgba(255,255,255,0.15);">0&ndash;25</span>
+          <span style="font-size:clamp(0.85rem,1.2vw,1rem); font-weight:700; color:#27AE60;">Low</span>
+          <span style="font-size:clamp(0.5rem,0.65vw,0.58rem); color:#bbb;">0&ndash;25</span>
         </div>
         <div id="cards-Low" style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px;"></div>
       </div>
     </div>
   </div>
-  <span class="slide-num" style="color:rgba(255,255,255,0.3);">18 / 19</span>
+  <span class="slide-num" >18 / 19</span>
 </section>
 
 <div class="divider"></div>
@@ -1802,10 +1802,10 @@ const levelColors = {Critical:'#E74C3C', High:'#E67E22', Medium:'#F39C12', Low:'
 function makeBar(last30) {
   return last30.map(v => {
     if (v > 0) {
-      const op = Math.min(0.35 + (v/15)*0.65, 1.0).toFixed(2);
-      return `<div title="${v} ใบ" style="flex:1;height:100%;background:rgba(192,57,43,${op});border-right:1px solid rgba(0,0,0,0.3);"></div>`;
+      const op = Math.min(0.3 + (v/15)*0.7, 1.0).toFixed(2);
+      return `<div title="${v} ใบ" style="flex:1;height:100%;background:rgba(192,57,43,${op});border-right:1px solid #fff;"></div>`;
     }
-    return `<div title="ไม่ซื้อ" style="flex:1;height:100%;background:rgba(255,255,255,0.04);border-right:1px solid rgba(0,0,0,0.3);"></div>`;
+    return `<div title="ไม่ซื้อ" style="flex:1;height:100%;background:#f0f0f0;border-right:1px solid #fff;"></div>`;
   }).join('');
 }
 
@@ -1813,20 +1813,20 @@ function makeCard(c, level) {
   const bar = makeBar(c.last30);
   const reasons = c.reasons.map((r, i) => {
     const sign = r.shap > 0 ? '+' : '';
-    const col = r.shap > 0 ? '#ef6b5a' : '#5ba0d6';
-    return `<div style="display:flex; justify-content:space-between; font-size:clamp(0.52rem,0.7vw,0.62rem); padding:2px 0; border-bottom:1px solid rgba(255,255,255,0.04);">
-      <span style="color:rgba(255,255,255,0.55);">${r.th}</span>
-      <span style="color:${col}; font-weight:600; white-space:nowrap; margin-left:6px;">${sign}${r.shap}</span>
+    const col = r.shap > 0 ? '#C0392B' : '#2980B9';
+    return `<div style="display:flex; justify-content:space-between; align-items:center; font-size:clamp(0.55rem,0.75vw,0.65rem); padding:3px 0; border-bottom:1px solid #f0f0f0;">
+      <span style="color:#666;">${r.th}</span>
+      <span style="color:${col}; font-weight:600; white-space:nowrap; margin-left:8px;">${sign}${r.shap}</span>
     </div>`;
   }).join('');
   
-  return `<div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:12px; backdrop-filter:blur(4px); transition:all 0.3s;" onmouseover="this.style.background='rgba(255,255,255,0.09)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-      <span style="font-size:clamp(0.65rem,0.85vw,0.75rem); color:rgba(255,255,255,0.8); font-weight:600; font-family:monospace;">${c.id}</span>
-      <span style="font-size:clamp(0.8rem,1.1vw,0.95rem); font-weight:800; color:#fff;">${c.score}</span>
+  return `<div style="background:#fff; border:1px solid #eee; border-radius:12px; padding:14px; box-shadow:0 2px 12px rgba(0,0,0,0.04); transition:all 0.3s;" onmouseover="this.style.boxShadow='0 4px 20px rgba(0,0,0,0.08)'; this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='0 2px 12px rgba(0,0,0,0.04)'; this.style.transform='translateY(0)'">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+      <span style="font-size:clamp(0.7rem,0.9vw,0.8rem); color:#333; font-weight:600; font-family:monospace;">${c.id}</span>
+      <span style="font-size:clamp(0.85rem,1.15vw,1rem); font-weight:800; color:#C0392B;">${c.score}</span>
     </div>
-    <div style="display:flex; height:6px; border-radius:3px; overflow:hidden; margin-bottom:8px; background:rgba(255,255,255,0.06);">${bar}</div>
-    <div style="font-size:clamp(0.48rem,0.62vw,0.55rem); color:rgba(255,255,255,0.25); margin-bottom:6px;">Active ${c.active}/${c.rounds} &bull; Last 6: ${c.last6}/6</div>
+    <div style="display:flex; height:8px; border-radius:4px; overflow:hidden; margin-bottom:8px; background:#f5f5f5;">${bar}</div>
+    <div style="font-size:clamp(0.5rem,0.65vw,0.58rem); color:#aaa; margin-bottom:6px;">Active ${c.active}/${c.rounds} &bull; Last 6: ${c.last6}/6</div>
     ${reasons}
   </div>`;
 }
