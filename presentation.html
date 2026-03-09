@@ -1814,9 +1814,8 @@ function makeCard(c, level) {
   const reasons = c.reasons.map((r, i) => {
     const sign = r.shap > 0 ? '+' : '';
     const col = r.shap > 0 ? '#C0392B' : '#2980B9';
-    return `<div style="display:flex; justify-content:space-between; align-items:center; font-size:clamp(0.55rem,0.75vw,0.65rem); padding:3px 0; border-bottom:1px solid #f0f0f0;">
-      <span style="color:#666;">${r.th}</span>
-      <span style="color:${col}; font-weight:600; white-space:nowrap; margin-left:8px;">${sign}${r.shap}</span>
+    return `<div style="font-size:clamp(0.55rem,0.75vw,0.65rem); padding:3px 0; border-bottom:1px solid #f0f0f0;">
+      <span style="color:#666;">${r.th}</span> <span style="color:${col}; font-weight:600;">${sign}${r.shap}</span>
     </div>`;
   }).join('');
   
