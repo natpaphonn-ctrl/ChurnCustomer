@@ -1,5 +1,11 @@
 *.csv
 *.pkl
+*.joblib
+*.npy
+*.parquet
+models/
+mlruns/
+cache/
 .claude/
 __pycache__/
 .ipynb_checkpoints/
