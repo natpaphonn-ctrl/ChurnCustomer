@@ -1910,6 +1910,7 @@ slides.forEach(s => scrollObserver.observe(s));
 
 
 // ===== PERSONA 360 DATA & LOGIC =====
+function p360Mask(id) { return id ? id.slice(0, -3) + 'xxx' : id; }
 let P360 = null;
 let P360_LOADED = false;
 const P360_LABELS = ["01/02", "01/17", "02/01", "02/16", "03/01", "03/16", "04/01", "04/16", "05/02", "05/16", "06/01", "06/16", "07/01", "07/16", "08/01", "08/16", "09/01", "09/16", "10/01", "10/16", "11/01", "11/16", "12/01", "12/16", "01/02", "01/17", "02/01", "02/16", "03/01", "03/16"];
@@ -2031,11 +2032,12 @@ function p360DoSearch(key) {
   var c = p360Decode(key);
   if (c) {
     p360Show(c);
+    document.getElementById('p360Input').value = p360Mask(key);
     document.getElementById('p360NotFound').style.display = 'none';
   } else {
     document.getElementById('p360Profile').classList.remove('active');
     document.getElementById('p360NotFound').style.display = 'block';
-    document.getElementById('p360NotFoundMsg').textContent = '\u0e44\u0e21\u0e48\u0e1e\u0e1a\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e25\u0e39\u0e01\u0e04\u0e49\u0e32 ' + key;
+    document.getElementById('p360NotFoundMsg').textContent = '\u0e44\u0e21\u0e48\u0e1e\u0e1a\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e25\u0e39\u0e01\u0e04\u0e49\u0e32 ' + p360Mask(key);
   }
 }
 
@@ -2053,7 +2055,7 @@ function p360DoRandom() {
   var ids = P360_BY_LEVEL[lvl];
   if (!ids || ids.length === 0) return;
   var id = ids[Math.floor(Math.random() * ids.length)];
-  document.getElementById('p360Input').value = id;
+  document.getElementById('p360Input').value = p360Mask(id);
   var c = p360Decode(id);
   if (c) p360Show(c);
 }
@@ -2079,9 +2081,9 @@ function p360DoFilter(lvl) {
   shown.forEach(function(id) {
     var chip = document.createElement('span');
     chip.className = 'p360-chip';
-    chip.textContent = id;
+    chip.textContent = p360Mask(id);
     chip.onclick = function() {
-      document.getElementById('p360Input').value = id;
+      document.getElementById('p360Input').value = p360Mask(id);
       var c = p360Decode(id);
       if (c) p360Show(c);
     };
@@ -2125,7 +2127,7 @@ function p360Show(c) {
   header.innerHTML = '<div class="p360-score-circle" style="background:' + colors.bg + ';">' +
     '<div class="p360-score-num" style="color:' + colors.color + ';">' + c.score + '</div>' +
     '<div class="p360-score-label" style="color:' + colors.color + ';">\u0e04\u0e30\u0e41\u0e19\u0e19</div></div>' +
-    '<div><div style="font-size:1.2rem; font-weight:700; color:var(--gray-800);">' + c.id + '</div>' +
+    '<div><div style="font-size:1.2rem; font-weight:700; color:var(--gray-800);">' + p360Mask(c.id) + '</div>' +
     '<span class="p360-badge" style="background:' + colors.bg + '; color:' + colors.color + ';">' + c.level + ' Risk</span>' +
     segBadge + clvBadge +
     '<div class="p360-action-text">' + (c.action || '') + '</div>' +
