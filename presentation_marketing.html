@@ -1701,7 +1701,66 @@ p, li {
       </select>
     </div>
     <h2>9 กลุ่มพฤติกรรมก่อนหยุดซื้อ <span style="font-size:0.6em;color:var(--gray-400);font-weight:400;">(K-Means Clustering)</span></h2>
-    <p id="patSubtitle" style="margin-bottom:12px; color:var(--gray-500);">จัดกลุ่มด้วย K-Means จากข้อมูลจริง &mdash; ตัวอย่างคือลูกค้าที่ใกล้ centroid ที่สุด (เห็น pattern ชัดที่สุด)</p>
+    <p id="patSubtitle" style="margin-bottom:8px; color:var(--gray-500);">จัดกลุ่มด้วย K-Means จากข้อมูลจริง &mdash; ตัวอย่างคือลูกค้าที่ใกล้ centroid ที่สุด (เห็น pattern ชัดที่สุด)</p>
+
+    <!-- Methodology explanation (collapsible) -->
+    <details style="margin-bottom:10px; background:#F0F9FF; border:1px solid #BAE6FD; border-radius:10px; padding:0;">
+      <summary style="padding:8px 14px; cursor:pointer; font-size:0.8rem; font-weight:700; color:#0369A1; list-style:none; display:flex; align-items:center; gap:6px;">
+        <span style="font-size:1rem;">&#128300;</span> วิธีการวิเคราะห์ &mdash; ทำไมถึงได้ 9 กลุ่มนี้? <span style="margin-left:auto;font-size:0.7rem;color:#7DD3FC;">(คลิกเพื่อดู)</span>
+      </summary>
+      <div style="padding:6px 14px 12px; font-size:0.75rem; line-height:1.7; color:#1E3A5F;">
+
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:8px;">
+          <!-- Step 1 -->
+          <div style="background:#fff; border-radius:8px; padding:8px 10px; border:1px solid #E0F2FE;">
+            <div style="font-weight:800; color:#0EA5E9; margin-bottom:4px;">&#9312; สร้าง Feature จากพฤติกรรม</div>
+            <div>ดึงข้อมูล <b>20 งวดก่อนหยุดซื้อ</b> ของลูกค้าแต่ละคน แล้วคำนวณ <b>8 ตัวชี้วัด</b>:</div>
+            <div style="margin-top:4px; display:grid; grid-template-columns:1fr 1fr; gap:2px 8px; font-size:0.7rem;">
+              <span>&#128200; <b>Activity</b> &mdash; ซื้อกี่งวดจาก 20</span>
+              <span>&#128201; <b>Trend</b> &mdash; ยอดเพิ่มหรือลด</span>
+              <span>&#127919; <b>Consistency</b> &mdash; ซื้อสม่ำเสมอแค่ไหน</span>
+              <span>&#9878;&#65039; <b>First-half</b> &mdash; ซื้อช่วงแรกเยอะมั้ย</span>
+              <span>&#128176; <b>Volume</b> &mdash; ยอดรวมมากน้อย</span>
+              <span>&#128165; <b>Burstiness</b> &mdash; ยอดพุ่งผิดปกติมั้ย</span>
+              <span>&#9889; <b>Late Accel</b> &mdash; ช่วงหลังเร่งตัวมั้ย</span>
+              <span>&#128260; <b>Avg Gap</b> &mdash; เว้นห่างกี่งวด</span>
+            </div>
+          </div>
+          <!-- Step 2 -->
+          <div style="background:#fff; border-radius:8px; padding:8px 10px; border:1px solid #E0F2FE;">
+            <div style="font-weight:800; color:#0EA5E9; margin-bottom:4px;">&#9313; K-Means Clustering (K=8)</div>
+            <div>ใช้ <b>MiniBatchKMeans</b> จัดกลุ่มลูกค้า ~257K คน (ที่ซื้อ 2+ งวด) เป็น <b>8 กลุ่ม</b> + 1 กลุ่มขาจร</div>
+            <div style="margin-top:6px;">
+              <div style="font-size:0.7rem;"><b>ทำไม K=8?</b></div>
+              <ul style="margin:2px 0 0 14px; padding:0; font-size:0.68rem;">
+                <li>ทดสอบ K=5-12 ด้วย Silhouette Score</li>
+                <li>K=5 ได้ score สูงสุด (0.229) แต่<b>น้อยเกินไป</b>สำหรับ marketing</li>
+                <li>K=8 ได้ score 0.199 &mdash; <b>สมดุล</b>ระหว่างความชัดเจนของกลุ่มกับความ actionable</li>
+                <li>+ 1 กลุ่ม &#11036; ลูกค้าที่ซื้อแค่ 0-1 งวด (ไม่มี pattern ให้จัด)</li>
+              </ul>
+            </div>
+          </div>
+          <!-- Step 3 -->
+          <div style="background:#fff; border-radius:8px; padding:8px 10px; border:1px solid #E0F2FE;">
+            <div style="font-weight:800; color:#0EA5E9; margin-bottom:4px;">&#9314; ตั้งชื่อ + เลือกตัวอย่าง</div>
+            <div><b>Auto-label</b>: ตั้งชื่อแต่ละกลุ่มจากค่าเฉลี่ย feature ของ centroid</div>
+            <div style="margin-top:6px;">
+              <div style="font-size:0.7rem;"><b>ตัวอย่างที่เห็น = ลูกค้าจริง</b></div>
+              <ul style="margin:2px 0 0 14px; padding:0; font-size:0.68rem;">
+                <li>เลือกลูกค้าที่<b>ใกล้ centroid ที่สุด</b> (ระยะ Euclidean น้อยที่สุด)</li>
+                <li>= ลูกค้าที่<b>เป็นตัวแทนของกลุ่มมากที่สุด</b></li>
+                <li>ทำให้ bar chart <b>เห็น pattern ชัดเจน</b>กว่า random sample</li>
+                <li>ถ้ากด &#127922; สุ่มใหม่ = ลูกค้าอื่นในกลุ่มเดียวกัน (อาจชัดน้อยกว่า)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div style="text-align:center; font-size:0.7rem; color:#64748B; border-top:1px solid #E0F2FE; padding-top:6px;">
+          &#128161; <b>ข้อดีของ K-Means</b>: ไม่ต้องกำหนดกฎเอง (rules-based) &mdash; ให้ข้อมูลบอกเองว่ามีกี่กลุ่ม แต่ละกลุ่มหน้าตาเป็นอย่างไร | <b>StandardScaler</b> ปรับ scale ก่อน cluster เพื่อไม่ให้ feature ใดมีอิทธิพลมากเกินไป
+        </div>
+      </div>
+    </details>
 
     <!-- Pattern selector: fixed grid -->
     <div id="patternBtns" style="display:grid; grid-template-columns:repeat(9,1fr); gap:4px; margin-bottom:10px;"></div>
