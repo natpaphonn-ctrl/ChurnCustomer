@@ -16,8 +16,8 @@ COLORS = {
     "Low": "#27AE60",
 }
 RISK_ORDER = ["Critical", "High", "Medium", "Low"]
-CSV_PATH = Path(__file__).parent / "Churn_RiskScore_Explained_2026_0316.csv"
-PRED_CSV_PATH = Path(__file__).parent / "Churn_Pred_0401.csv"
+CSV_PATH = Path(__file__).parent / "data" / "predictions" / "Churn_RiskScore_Explained_2026_0401.csv"
+PRED_CSV_PATH = Path(__file__).parent / "data" / "predictions" / "Churn_Pred_0401.csv"
 CHARTS_DIR = Path(__file__).parent / "charts"
 MODELS_DIR = Path(__file__).parent / "models"
 ENSEMBLE_CONFIG_PATH = MODELS_DIR / "ensemble_config.json"
@@ -55,7 +55,7 @@ df = df_raw[
 
 # ── Header ──────────────────────────────────────────────────────────────────
 st.title("Churn Prediction Dashboard")
-st.caption("งวด 0316 — ข้อมูลรันในเครื่อง local เท่านั้น")
+st.caption("งวด 0401 — ข้อมูลรันในเครื่อง local เท่านั้น")
 
 # ── Row 1: KPI Cards ────────────────────────────────────────────────────────
 total = len(df)
