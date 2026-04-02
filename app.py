@@ -629,6 +629,179 @@ if tx_chart_path.exists():
 st.divider()
 
 # ══════════════════════════════════════════════════════════════════════════════
+# ── Section: Churn Behavioral Patterns ───────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+st.header("9 รูปแบบพฤติกรรมก่อนหยุดซื้อ")
+st.caption("วิเคราะห์ลูกค้าที่ Churn — จำแนกเป็น 9 กลุ่มพฤติกรรมพร้อมตัวอย่างจริง")
+
+PATTERNS_JSON = Path(__file__).parent / "data" / "predictions" / "churn_patterns.json"
+
+
+@st.cache_data
+def load_patterns():
+    if PATTERNS_JSON.exists():
+        with open(PATTERNS_JSON, encoding="utf-8") as f:
+            return json.load(f)
+    return None
+
+
+pat_data = load_patterns()
+
+if pat_data is None:
+    st.warning("ไม่พบไฟล์ data/predictions/churn_patterns.json — รัน scripts/generate_churn_patterns.py ก่อน")
+else:
+    # Period selector
+    pat_period = st.radio(
+        "เลือกงวด",
+        options=list(pat_data.keys()),
+        format_func=lambda x: f"งวด {x[:2]}/{x[2:]}",
+        horizontal=True,
+        key="pat_period",
+    )
+    pd_sel = pat_data[pat_period]
+    patterns = pd_sel["patterns"]
+    labels = pd_sel["labels"]
+    total_churned = pd_sel["total_churned"]
+
+    st.markdown(f"**ลูกค้าที่หยุดซื้อทั้งหมด: {total_churned:,} คน**")
+
+    # ── Pattern distribution bar chart ──────────────────────────────
+    pat_names = []
+    pat_counts = []
+    pat_colors = []
+    pat_icons = []
+    for key, p in patterns.items():
+        pat_names.append(f"{p['icon']} {p['name_th']}")
+        pat_counts.append(p["count"])
+        pat_colors.append(p["color"])
+        pat_icons.append(p["icon"])
+
+    fig_pat = go.Figure(go.Bar(
+        y=pat_names[::-1],
+        x=pat_counts[::-1],
+        orientation="h",
+        marker_color=pat_colors[::-1],
+        text=[f"{c:,} ({c/total_churned*100:.1f}%)" for c in pat_counts[::-1]],
+        textposition="auto",
+        textfont=dict(size=11),
+    ))
+    fig_pat.update_layout(
+        xaxis_title="จำนวนลูกค้า",
+        yaxis_title="",
+        margin=dict(t=10, b=30, l=10, r=10),
+        height=380,
+        xaxis=dict(showgrid=True, gridcolor="#F3F4F6"),
+    )
+    st.plotly_chart(fig_pat, use_container_width=True)
+
+    # ── Pattern detail selector ─────────────────────────────────────
+    st.subheader("รายละเอียด & ตัวอย่างลูกค้าจริง")
+
+    pat_options = {key: f"{p['icon']} {p['name_th']} ({p['count']:,} คน)" for key, p in patterns.items()}
+    selected_pat = st.selectbox(
+        "เลือก Pattern",
+        options=list(pat_options.keys()),
+        format_func=lambda x: pat_options[x],
+        key="pat_select",
+    )
+
+    p = patterns[selected_pat]
+
+    # Description & action
+    st.info(p["desc"])
+    st.success(p["action"])
+
+    # Stats row
+    sp1, sp2, sp3 = st.columns(3)
+    sp1.metric("จำนวนลูกค้า", f"{p['count']:,}")
+    sp2.metric("สัดส่วน", p["pct"])
+    sp3.metric("ซื้องวดสุดท้ายเฉลี่ย", f"{p['avg_last']} ใบ")
+
+    # ── Example customer charts ─────────────────────────────────────
+    examples = p["examples"]
+    n_show = min(6, len(examples))
+    if n_show > 0:
+        st.markdown(f"**ตัวอย่างลูกค้าจริง** ({n_show} จาก {len(examples)} ตัวอย่าง)")
+
+        # Random button
+        if "pat_offset" not in st.session_state:
+            st.session_state["pat_offset"] = 0
+        if st.button("🔀 สุ่มตัวอย่างใหม่", key="pat_random"):
+            st.session_state["pat_offset"] = (st.session_state["pat_offset"] + 6) % max(len(examples), 1)
+
+        offset = st.session_state["pat_offset"] % len(examples)
+        show_exs = []
+        for i in range(n_show):
+            show_exs.append(examples[(offset + i) % len(examples)])
+
+        # Show in 2 columns x 3 rows
+        for row_i in range(0, n_show, 2):
+            cols = st.columns(2)
+            for col_i in range(2):
+                idx = row_i + col_i
+                if idx >= n_show:
+                    break
+                ex = show_exs[idx]
+                with cols[col_i]:
+                    st.markdown(
+                        f"**{ex['uid']}** — ซื้อ {ex['active']}/{ex['tenure']} งวด, "
+                        f"เฉลี่ย {ex['avg']} ใบ/งวด"
+                    )
+                    vals = ex["vals"]
+                    bar_colors = []
+                    for vi, v in enumerate(vals):
+                        if v is None or v == 0:
+                            bar_colors.append("#E5E7EB")
+                        else:
+                            bar_colors.append(p["color"])
+
+                    fig_ex = go.Figure(go.Bar(
+                        x=labels,
+                        y=[v if v and v > 0 else 0.3 for v in vals],
+                        marker_color=bar_colors,
+                        hovertext=[f"{labels[i]}: {vals[i]} ใบ" for i in range(len(vals))],
+                        hoverinfo="text",
+                    ))
+                    fig_ex.update_layout(
+                        xaxis=dict(tickangle=-45, tickfont=dict(size=8)),
+                        yaxis_title="จำนวนใบ",
+                        margin=dict(t=5, b=5, l=5, r=5),
+                        height=180,
+                        showlegend=False,
+                    )
+                    st.plotly_chart(fig_ex, use_container_width=True, key=f"pat_ex_{pat_period}_{selected_pat}_{idx}_{offset}")
+
+    st.divider()
+
+    # ── Wow insights summary ────────────────────────────────────────
+    st.subheader("💡 Wow Insights")
+
+    wow_data = []
+    for key in ["whale_gone", "loyal_veteran", "escalator", "u_shape"]:
+        if key in patterns:
+            wp = patterns[key]
+            wow_data.append({
+                "Pattern": f"{wp['icon']} {wp['name_th']}",
+                "จำนวน": f"{wp['count']:,}",
+                "สัดส่วน": wp["pct"],
+                "ทำไมว้าว": {
+                    "whale_gone": "ลูกค้า 1 คนหาย = เสียรายได้เท่าขาจร 100 คน",
+                    "loyal_veteran": "ซื้อทุกงวด CV≈0 ไม่มีสัญญาณเตือนเลย!",
+                    "escalator": "ยอดซื้อเพิ่มขึ้นเรื่อยๆ แต่ดันหาย — Counterintuitive!",
+                    "u_shape": "กลับมาซื้อแล้ว แต่ยังหายอีก — ดึงกลับไม่พอ!",
+                }.get(key, ""),
+            })
+
+    if wow_data:
+        st.dataframe(
+            pd.DataFrame(wow_data),
+            hide_index=True,
+            use_container_width=True,
+        )
+
+st.divider()
+
+# ══════════════════════════════════════════════════════════════════════════════
 # ── Section: Phase Results Gallery ───────────────────────────────────────────
 # ══════════════════════════════════════════════════════════════════════════════
 st.header("Phase Results Gallery")
