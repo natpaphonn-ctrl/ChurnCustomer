@@ -314,11 +314,13 @@ def process_period(period, fname):
         uid = str(churned.iloc[i]['userNo'])
         masked = uid[:6] + 'xxx' if uid.startswith('P') else 'P' + uid[:5] + 'xxx'
         active_vals = [v for v in vals20_int if v > 0]
+        # Display vals: last 19 pre-churn periods + 0 for churn period = 20 bars
+        display_vals = vals20_int[1:] + [0]
         entry = {
             'uid': masked, 'tenure': n_periods,
             'active': sum(1 for v in vals20_int if v > 0),
             'avg': round(np.mean(active_vals), 1) if active_vals else 0,
-            'last_amount': vals20_int[-1], 'vals': vals20_int
+            'last_amount': vals20_int[-1], 'vals': display_vals
         }
 
         if pat == 'gradual_decline':
