@@ -1,6 +1,8 @@
 """
-Generate churn_patterns.json using K-Means clustering on behavioral features.
-Clusters churned customers by purchase behavior, picks closest-to-centroid examples.
+Generate churn_patterns.json — Rules-based classification + PCA 3D visualization.
+
+Rules-based for clear bar chart examples.
+K-Means + PCA 3D for interactive cluster visualization.
 
 Usage: python3 scripts/generate_churn_patterns.py
 """
@@ -10,8 +12,8 @@ import json
 import os
 import warnings
 from sklearn.cluster import MiniBatchKMeans
-from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
 
 warnings.filterwarnings('ignore', category=RuntimeWarning)
 
@@ -24,15 +26,138 @@ PERIODS = [
     ('0316', 'Churn_2025_0301_0316.csv'),
 ]
 
-COLORS = ['#EF4444', '#F97316', '#F59E0B', '#10B981', '#0EA5E9',
-          '#6366F1', '#A855F7', '#EC4899', '#8B5CF6', '#14B8A6']
-
-# Domain-driven K=8: enough for actionable segmentation
 FIXED_K = 8
+PCA_SAMPLE_PER_CLUSTER = 2000
+
+# ── Rules-based pattern metadata ──
+PATTERN_META = {
+    'whale_gone': {
+        'name_th': 'ขาใหญ่หายไป', 'icon': '🐋', 'color': '#0EA5E9',
+        'desc': '🐋 ขาใหญ่หายไป (Whale Gone): ซื้อรวม 500+ ใบใน 20 งวด — ลูกค้า 1 คนเสีย = ขาจร 100 คน',
+        'action': '🎯 Action: VIP treatment ทันที — โทรติดตาม ส่ง exclusive offer สูญเสียรายได้สูงมาก!'
+    },
+    'loyal_veteran': {
+        'name_th': 'ขาประจำหายไป', 'icon': '🏆', 'color': '#F97316',
+        'desc': '🏆 ขาประจำหายไป (Loyal Veteran): ซื้อทุกงวด 19-20/20 งวด ยอดคงที่สม่ำเสมอ (CV < 0.35) แล้วหายไปเลย',
+        'action': '🎯 Action: ไม่มีสัญญาณเตือน! ต้องเช็คปัจจัยภายนอก — ย้ายแพลตฟอร์ม? ปัญหาบัญชี? โทรสอบถาม'
+    },
+    'escalator': {
+        'name_th': 'ยอดขึ้นเรื่อยๆ แล้วหาย', 'icon': '📈', 'color': '#10B981',
+        'desc': '📈 ยอดขึ้นเรื่อยๆ แล้วหาย (Escalator): ยอดซื้อเพิ่มขึ้นต่อเนื่อง ครึ่งหลัง > 1.5x ครึ่งแรก แล้วจู่ๆ หายไป!',
+        'action': '🎯 Action: Counterintuitive! ยอดขึ้นไม่ได้แปลว่าจะอยู่ — อาจเป็นตัวแทน/ฝากซื้อที่หมดลูกค้า ติดตามทันที'
+    },
+    'gradual_decline': {
+        'name_th': 'ค่อยๆ ลดลง', 'icon': '📉', 'color': '#F59E0B',
+        'desc': '📉 ค่อยๆ ลดลง (Gradual Decline): ซื้อ 10+ งวด ยอดลดลงต่อเนื่อง — ครึ่งหลังเหลือไม่ถึง 60% ของครึ่งแรก (R² ≥ 0.25)',
+        'action': '🎯 Action: จับสัญญาณตั้งแต่ยอดลดครั้งที่ 2 — ส่ง offer เพิ่มยอดกลับ ยังทันรักษา'
+    },
+    'u_shape': {
+        'name_th': 'กลับมาแล้วหายอีก', 'icon': '🫥', 'color': '#A855F7',
+        'desc': '🫥 กลับมาแล้วหายอีก (U-Shape): ซื้อช่วงแรก → หายไป 7+ งวด → กลับมาซื้อ → แล้วหายอีก!',
+        'action': '🎯 Action: "ดึงกลับ" อย่างเดียวไม่พอ — ต้อง "รักษาหลังกลับ" ด้วย ส่ง offer ต่อเนื่อง 3 งวดหลังกลับมา'
+    },
+    'sudden_stop': {
+        'name_th': 'หยุดกะทันหัน', 'icon': '🛑', 'color': '#EF4444',
+        'desc': '🛑 หยุดกะทันหัน (Sudden Stop): ซื้อสม่ำเสมอ 7+ งวด แล้วหายไปเลย — CV < 0.4 ไม่มีสัญญาณเตือน',
+        'action': '🎯 Action: ต้องติดต่อเชิงรุก — ลูกค้ากลุ่มนี้ไม่มีสัญญาณก่อนหยุด อาจมีปัจจัยภายนอก'
+    },
+    'spike_gone': {
+        'name_th': 'พุ่งแล้วหาย', 'icon': '🚀', 'color': '#EC4899',
+        'desc': '🚀 พุ่งแล้วหาย (Spike & Gone): งวดสุดท้ายซื้อเยอะผิดปกติ (2x+ ค่าเฉลี่ย, 10+ ใบ) แล้วหายไป',
+        'action': '🎯 Action: อาจเป็นการซื้อพิเศษ (ฝากซื้อ/เลขเด็ด) — ส่ง offer หลังซื้อเพื่อดึงกลับ'
+    },
+    'last_breath': {
+        'name_th': 'แทบไม่เคยซื้อ', 'icon': '👻', 'color': '#6B7280',
+        'desc': '👻 แทบไม่เคยซื้อ (Last Breath): ซื้อแค่ 1-2 งวดจาก 10 งวดล่าสุด — แทบไม่ใช่ลูกค้าประจำ',
+        'action': '🎯 Action: ลูกค้าขาจร — ROI ต่ำในการรักษา ใช้ automated campaign เท่านั้น'
+    },
+    'irregular_gone': {
+        'name_th': 'ซื้อไม่สม่ำเสมอ', 'icon': '🔀', 'color': '#3B82F6',
+        'desc': '🔀 ซื้อไม่สม่ำเสมอ (Irregular): ไม่เข้ากลุ่มไหน — ซื้อบ้างหยุดบ้าง ไม่มี pattern ชัดเจน',
+        'action': '🎯 Action: ใช้ general retention campaign — ไม่ต้องเจาะจงมาก'
+    }
+}
+
+PATTERN_ORDER = ['whale_gone', 'loyal_veteran', 'escalator', 'gradual_decline',
+                 'u_shape', 'sudden_stop', 'spike_gone', 'last_breath', 'irregular_gone']
 
 
+# ── Rules-based classifier ──
+def classify(vals20):
+    """Classify a churned customer into one of 9 behavioral patterns."""
+    vals10 = vals20[-10:]
+    active20 = sum(1 for v in vals20 if v > 0)
+    active10 = sum(1 for v in vals10 if v > 0)
+    active_vals20 = [v for v in vals20 if v > 0]
+    active_vals10 = [v for v in vals10 if v > 0]
+    total = sum(vals20)
+    last_val = vals20[-1]
+
+    if active10 <= 2:
+        return 'last_breath'
+
+    if len(active_vals10) > 1:
+        other_mean = np.mean(active_vals10[:-1])
+        spike = last_val / other_mean if other_mean > 0 else 1
+        if spike >= 2.0 and last_val >= 10:
+            return 'spike_gone'
+
+    if total >= 500:
+        return 'whale_gone'
+
+    if active20 >= 19:
+        mean_val = np.mean(active_vals20)
+        cv = np.std(active_vals20) / mean_val if mean_val > 0 else 0
+        if cv < 0.35:
+            return 'loyal_veteran'
+
+    if active20 >= 10:
+        f_sum = sum(vals20[:10])
+        s_sum = sum(vals20[10:])
+        if f_sum > 0 and s_sum > f_sum * 1.5:
+            positions = [i for i, v in enumerate(vals20) if v > 0]
+            values = [vals20[i] for i in positions]
+            if len(values) >= 4:
+                slope = np.polyfit(range(len(values)), values, 1)[0]
+                if slope > 0.3:
+                    return 'escalator'
+
+    if active20 >= 10:
+        f_half = np.mean(vals20[:10])
+        s_half = np.mean(vals20[10:])
+        if f_half >= 3 and s_half < f_half * 0.6:
+            slope, intercept = np.polyfit(range(20), vals20, 1)
+            if slope < -0.1:
+                predicted = [slope * x + intercept for x in range(20)]
+                ss_res = sum((vals20[i] - predicted[i])**2 for i in range(20))
+                ss_tot = sum((vals20[i] - np.mean(vals20))**2 for i in range(20))
+                r2 = 1 - ss_res / ss_tot if ss_tot > 0 else 0
+                if r2 >= 0.25:
+                    return 'gradual_decline'
+
+    early = sum(1 for v in vals20[:7] if v > 0)
+    mid = sum(1 for v in vals20[7:14] if v > 0)
+    late = sum(1 for v in vals20[14:] if v > 0)
+    if early >= 4 and mid <= 1 and late >= 2:
+        return 'u_shape'
+
+    if active10 >= 5:
+        mean_active = np.mean(active_vals10) if active_vals10 else 0
+        cv = np.std(active_vals10) / mean_active if mean_active > 0 else 0
+        positions = [i for i, v in enumerate(vals10) if v > 0]
+        values = [vals10[i] for i in positions]
+        slope10 = np.polyfit(range(len(values)), values, 1)[0] if len(values) >= 2 else 0
+        if active10 >= 7 and cv < 0.4 and abs(slope10) < 0.5:
+            return 'sudden_stop'
+        elif active10 >= 7 and slope10 >= -0.3:
+            return 'sudden_stop'
+
+    return 'irregular_gone'
+
+
+# ── Feature extraction for PCA ──
 def extract_features(raw_matrix):
-    """Extract 8 behavioral features from 20-period purchase vectors."""
+    """Extract 8 behavioral features for K-Means/PCA."""
     n_customers, n_periods = raw_matrix.shape
     half = n_periods // 2
     features = np.zeros((n_customers, 8), dtype=np.float32)
@@ -44,50 +169,29 @@ def extract_features(raw_matrix):
         total = vals.sum()
         active_vals = vals[active]
 
-        # 1. Activity ratio (0-1)
         features[i, 0] = active_count / n_periods
-
-        # 2. Trend slope (normalized by mean)
         if active_count >= 3:
             slope = np.polyfit(np.arange(n_periods), vals, 1)[0]
-            mean_val = vals.mean()
-            features[i, 1] = slope / max(mean_val, 0.01)
-        else:
-            features[i, 1] = 0
-
-        # 3. Consistency: 1/(1+CV) of active periods
+            features[i, 1] = slope / max(vals.mean(), 0.01)
         if active_count >= 2:
-            cv = np.std(active_vals) / np.mean(active_vals)
-            features[i, 2] = 1.0 / (1.0 + cv)
-        else:
-            features[i, 2] = 0
-
-        # 4. First-half weight: proportion of total in first half
+            features[i, 2] = 1.0 / (1.0 + np.std(active_vals) / np.mean(active_vals))
         if total > 0:
             features[i, 3] = vals[:half].sum() / total
         else:
             features[i, 3] = 0.5
-
-        # 5. Volume (log-scaled)
         features[i, 4] = np.log1p(total)
-
-        # 6. Burstiness: max / mean of active periods
         if active_count >= 2:
             features[i, 5] = np.max(active_vals) / np.mean(active_vals)
         else:
             features[i, 5] = 1.0
-
-        # 7. Late acceleration: last 5 periods avg / first 5 periods avg
         first5 = vals[:5].mean()
         last5 = vals[-5:].mean()
         if first5 > 0:
             features[i, 6] = last5 / first5
         elif last5 > 0:
-            features[i, 6] = 5.0  # cap: only late activity
+            features[i, 6] = 5.0
         else:
             features[i, 6] = 1.0
-
-        # 8. Avg gap between purchases
         active_indices = np.where(active)[0]
         if len(active_indices) >= 2:
             features[i, 7] = np.mean(np.diff(active_indices))
@@ -97,162 +201,70 @@ def extract_features(raw_matrix):
     return features
 
 
-FEATURE_NAMES = ['activity', 'trend', 'consistency', 'first_half_wt',
-                 'volume', 'burstiness', 'late_accel', 'avg_gap']
+def compute_pca_3d(X_scaled, pattern_labels_arr, pattern_keys, colors_map, rng):
+    """Compute PCA 3D from feature space, colored by rules-based pattern."""
+    print("  Computing PCA 3D...")
+    pca = PCA(n_components=3, random_state=42)
+    pca.fit(X_scaled)
+    explained = pca.explained_variance_ratio_
+    print(f"    Explained variance: PC1={explained[0]:.3f}, PC2={explained[1]:.3f}, PC3={explained[2]:.3f} (total={sum(explained):.3f})")
 
-
-def label_cluster(feat_means):
-    """Label cluster based on feature means. Returns (base_label, name_th, icon, desc, action).
-    base_label is used for deduplication."""
-    activity = feat_means[0]
-    trend = feat_means[1]
-    consistency = feat_means[2]
-    first_half_wt = feat_means[3]
-    volume = feat_means[4]
-    burstiness = feat_means[5]
-    late_accel = feat_means[6]
-    avg_gap = feat_means[7]
-
-    # Score each pattern and return the best match
-    # Format: (score, base_label, name_th, icon, desc, action)
-    candidates = []
-
-    # --- VIP / Loyal ---
-    if activity >= 0.6 and consistency > 0.5 and volume > 4.0:
-        s = activity * 10 + consistency * 5 + volume
-        candidates.append((s, 'vip', 'ขาประจำหายไป', '🏆',
-            'ซื้อทุกงวดสม่ำเสมอ ยอดสูง แล้วหายไปเลย',
-            'VIP! โทรสอบถามทันที — อาจย้ายแพลตฟอร์ม?'))
-
-    # --- Sudden Stop (consistent then gone) ---
-    if activity >= 0.5 and consistency > 0.45 and abs(trend) < 0.04:
-        s = activity * 8 + consistency * 6
-        candidates.append((s, 'sudden_stop', 'ซื้อสม่ำเสมอแล้วหาย', '🛑',
-            'ซื้อสม่ำเสมอหลายงวดแล้วหยุดกะทันหัน',
-            'ไม่มีสัญญาณก่อนหยุด — ติดต่อเชิงรุก'))
-
-    # --- Gradual Decline ---
-    if trend < -0.03 and first_half_wt > 0.52 and activity >= 0.3:
-        s = abs(trend) * 20 + first_half_wt * 5
-        candidates.append((s, 'decline', 'ค่อยๆ ลดลง', '📉',
-            'ยอดซื้อลดลงต่อเนื่องจนหยุดซื้อ',
-            'จับสัญญาณตั้งแต่ยอดลดครั้งที่ 2 — ส่ง offer เพิ่มยอดกลับ'))
-
-    # --- Escalator (rising then gone) ---
-    if trend > 0.05 and first_half_wt < 0.4 and activity >= 0.2:
-        s = trend * 20 + (1 - first_half_wt) * 5
-        candidates.append((s, 'escalator', 'ยอดขึ้นแล้วหาย', '📈',
-            'ยอดซื้อเพิ่มขึ้นเรื่อยๆ แล้วจู่ๆ หายไป',
-            'ยอดขึ้นไม่ได้แปลว่าจะอยู่ — ติดตามทันที'))
-
-    # --- Spike & Gone (bursty) ---
-    if burstiness > 2.3 and activity >= 0.3:
-        s = burstiness * 3
-        candidates.append((s, 'spike', 'พุ่งแล้วหาย', '🚀',
-            'มียอดพุ่งสูงผิดปกติบางงวด ไม่ต่อเนื่อง',
-            'อาจซื้อพิเศษ (ฝากซื้อ/เลขเด็ด) — ส่ง offer หลังซื้อ'))
-
-    # --- New customer (recent, low activity) ---
-    if activity < 0.2 and first_half_wt < 0.3:
-        s = (1 - activity) * 5 + (1 - first_half_wt) * 3
-        candidates.append((s, 'new', 'เพิ่งเริ่มซื้อ', '🌱',
-            'เพิ่งเริ่มซื้อ 2-3 งวดล่าสุดแล้วหยุด',
-            'ลูกค้าใหม่ที่หลุด — ส่ง welcome back ทันที'))
-
-    # --- Gone long ago ---
-    if activity < 0.2 and first_half_wt > 0.5:
-        s = (1 - activity) * 5 + first_half_wt * 3
-        candidates.append((s, 'ghost', 'หายไปนานแล้ว', '💨',
-            'เคยซื้อช่วงแรกๆ แล้วหายไปตั้งนาน',
-            'หายนานเกิน — ใช้ automated campaign'))
-
-    # --- Sparse irregular ---
-    if activity < 0.2 and avg_gap > 5:
-        s = avg_gap
-        candidates.append((s, 'sparse', 'แทบไม่เคยซื้อ', '👻',
-            'ซื้อแค่ 2-3 งวดกระจายๆ ไม่เคยเป็นลูกค้าประจำ',
-            'ลูกค้าขาจร — ใช้ automated campaign'))
-
-    # --- On-off pattern ---
-    if 0.2 <= activity < 0.5 and avg_gap > 2.5:
-        s = avg_gap * 2
-        candidates.append((s, 'onoff', 'ซื้อบ้างหยุดบ้าง', '🔀',
-            'ซื้อไม่สม่ำเสมอ เว้นบ่อย',
-            'ส่ง offer ตรงงวดที่เคยซื้อ'))
-
-    # --- Moderate irregular ---
-    if 0.3 <= activity < 0.6:
-        s = activity * 3
-        candidates.append((s, 'moderate', 'ซื้อบ่อยพอสมควร', '🔶',
-            'ซื้อราวครึ่งหนึ่งของงวด ยอดไม่คงที่',
-            'ส่ง offer ต่อเนื่องเพื่อสร้างความสม่ำเสมอ'))
-
-    # --- Frequent but volatile ---
-    if activity >= 0.5 and consistency < 0.5:
-        s = activity * 3 + burstiness
-        candidates.append((s, 'volatile', 'ซื้อบ่อยแต่ผันผวน', '⚡',
-            'ซื้อหลายงวดแต่ยอดผันผวนมาก',
-            'ส่ง offer ต่อเนื่องเพื่อสร้าง loyalty'))
-
-    if candidates:
-        candidates.sort(key=lambda x: -x[0])
-        return candidates[0][1:]  # (base_label, name_th, icon, desc, action)
-
-    # Default
-    return ('other', 'อื่นๆ', '💫', 'ไม่เข้ากลุ่มไหนชัดเจน', 'ใช้ general retention campaign')
-
-
-def deduplicate_labels(cluster_metas, features_per_cluster):
-    """Resolve duplicate base_labels by adding distinguishing suffixes."""
-    # Group by base_label
-    label_groups = {}
-    for c_idx, meta in cluster_metas.items():
-        base = meta['base_label']
-        if base not in label_groups:
-            label_groups[base] = []
-        label_groups[base].append(c_idx)
-
-    for base, indices in label_groups.items():
-        if len(indices) <= 1:
+    # Sample per pattern for visualization
+    pca_points = []
+    for pat_idx, pat_key in enumerate(pattern_keys):
+        mask = pattern_labels_arr == pat_idx
+        indices = np.where(mask)[0]
+        if len(indices) == 0:
             continue
+        n_sample = min(PCA_SAMPLE_PER_CLUSTER, len(indices))
+        sampled = rng.choice(indices, n_sample, replace=False)
+        coords = pca.transform(X_scaled[sampled])
+        for j in range(n_sample):
+            pca_points.append([
+                pat_idx,
+                round(float(coords[j, 0]), 2),
+                round(float(coords[j, 1]), 2),
+                round(float(coords[j, 2]), 2)
+            ])
 
-        # Find most distinguishing feature between duplicates
-        feats = {idx: features_per_cluster[idx] for idx in indices}
+    print(f"    PCA points: {len(pca_points):,}")
 
-        # Compare: what's most different?
-        feat_arrays = np.array([feats[idx] for idx in indices])
-        feat_range = feat_arrays.max(axis=0) - feat_arrays.min(axis=0)
-        # Normalize by mean to get relative range
-        feat_mean = feat_arrays.mean(axis=0)
-        feat_mean[feat_mean == 0] = 1
-        relative_range = feat_range / np.abs(feat_mean)
-        best_feat_idx = np.argmax(relative_range)
-        best_feat_name = FEATURE_NAMES[best_feat_idx]
+    # Centroids per pattern in PCA space
+    centroids_pca = []
+    for pat_idx in range(len(pattern_keys)):
+        mask = pattern_labels_arr == pat_idx
+        if mask.sum() == 0:
+            centroids_pca.append([0, 0, 0])
+            continue
+        centroid_3d = pca.transform(X_scaled[mask].mean(axis=0).reshape(1, -1))[0]
+        centroids_pca.append([round(float(v), 2) for v in centroid_3d])
 
-        # Add distinguishing suffix
-        suffixes = {
-            'activity': ('ซื้อน้อยกว่า', 'ซื้อบ่อยกว่า'),
-            'trend': ('ยอดลดลง', 'ยอดเพิ่มขึ้น'),
-            'consistency': ('ผันผวน', 'สม่ำเสมอ'),
-            'first_half_wt': ('ช่วงหลัง', 'ช่วงแรก'),
-            'volume': ('ยอดน้อย', 'ยอดมาก'),
-            'burstiness': ('คงที่', 'เป็นพักๆ'),
-            'late_accel': ('ช้าลง', 'เร็วขึ้น'),
-            'avg_gap': ('ถี่', 'ห่าง'),
-        }
+    colors = [colors_map.get(pk, '#888') for pk in pattern_keys]
 
-        low_suffix, high_suffix = suffixes.get(best_feat_name, ('แบบ A', 'แบบ B'))
+    return pca_points, centroids_pca, [round(float(v), 3) for v in explained], colors
 
-        # Sort by the distinguishing feature
-        sorted_idx = sorted(indices, key=lambda idx: feats[idx][best_feat_idx])
-        for rank, idx in enumerate(sorted_idx):
-            suffix = low_suffix if rank < len(sorted_idx) / 2 else high_suffix
-            old_name = cluster_metas[idx]['name_th']
-            cluster_metas[idx]['name_th'] = f"{old_name} ({suffix})"
-            cluster_metas[idx]['desc'] = cluster_metas[idx]['desc'].replace(
-                old_name, cluster_metas[idx]['name_th'], 1)
 
-    return cluster_metas
+def pick_decline_display(candidates, n=30):
+    """Pick best visual decline examples."""
+    scored = []
+    for c in candidates:
+        vals = c['vals']
+        g = [np.mean(vals[i*5:(i+1)*5]) for i in range(4)]
+        mono = sum(1 for i in range(3) if g[i] > g[i+1] * 0.85)
+        if mono < 3 or g[0] < 6 or g[3] > 5:
+            continue
+        has_spike = any(
+            v > g[gi] * 2.5 and v > 8
+            for gi in range(4) if g[gi] > 0
+            for v in vals[gi*5:(gi+1)*5]
+        )
+        if has_spike or vals[-1] > 5:
+            continue
+        mono_strict = sum(1 for i in range(3) if g[i] > g[i+1])
+        score = c.get('r2', 0.5) * 30 + mono_strict * 10 + min(g[0] / max(g[3], 0.1), 30) + c.get('active', 15)
+        scored.append((score, c))
+    scored.sort(key=lambda x: -x[0])
+    return [s[1] for s in scored[:n]]
 
 
 def get_labels(item_cols, n=20):
@@ -285,153 +297,133 @@ def process_period(period, fname):
 
     raw_matrix = churned[classify_cols].fillna(0).values.astype(np.float32)
 
-    # Filter: at least 2 purchases
+    # ── Rules-based classification ──
+    print("  Classifying patterns (rules-based)...")
+    pattern_counts = {p: 0 for p in PATTERN_ORDER}
+    pattern_examples = {p: [] for p in PATTERN_ORDER}
+    decline_candidates = []
+    pattern_labels_list = []  # per-customer pattern index
+
+    for i in range(len(churned)):
+        vals20 = raw_matrix[i].tolist()
+        vals20_int = [int(v) for v in vals20]
+        pat = classify(vals20_int)
+        pattern_counts[pat] += 1
+        pattern_labels_list.append(PATTERN_ORDER.index(pat))
+
+        uid = str(churned.iloc[i]['userNo'])
+        masked = uid[:6] + 'xxx' if uid.startswith('P') else 'P' + uid[:5] + 'xxx'
+        active_vals = [v for v in vals20_int if v > 0]
+        entry = {
+            'uid': masked, 'tenure': n_periods,
+            'active': sum(1 for v in vals20_int if v > 0),
+            'avg': round(np.mean(active_vals), 1) if active_vals else 0,
+            'last_amount': vals20_int[-1], 'vals': vals20_int
+        }
+
+        if pat == 'gradual_decline':
+            slope, intercept = np.polyfit(range(20), vals20_int, 1)
+            predicted = [slope * x + intercept for x in range(20)]
+            ss_res = sum((vals20_int[j] - predicted[j])**2 for j in range(20))
+            ss_tot = sum((vals20_int[j] - np.mean(vals20_int))**2 for j in range(20))
+            r2 = 1 - ss_res / ss_tot if ss_tot > 0 else 0
+            decline_candidates.append({**entry, 'r2': r2})
+
+        if len(pattern_examples[pat]) < 100:
+            pattern_examples[pat].append(entry)
+
+    # Pick best display examples per pattern
+    decline_display = pick_decline_display(decline_candidates, 30)
+    if decline_display:
+        pattern_examples['gradual_decline'] = decline_display
+
+    pattern_examples['whale_gone'].sort(key=lambda e: -sum(e['vals']))
+    pattern_examples['whale_gone'] = pattern_examples['whale_gone'][:30]
+
+    for e in pattern_examples['loyal_veteran']:
+        v = [x for x in e['vals'] if x > 0]
+        e['_cv'] = np.std(v) / np.mean(v) if np.mean(v) > 0 else 1
+    pattern_examples['loyal_veteran'].sort(key=lambda e: e.pop('_cv'))
+    pattern_examples['loyal_veteran'] = pattern_examples['loyal_veteran'][:30]
+
+    for e in pattern_examples['escalator']:
+        e['_growth'] = sum(e['vals'][10:]) / max(sum(e['vals'][:10]), 1)
+    pattern_examples['escalator'].sort(key=lambda e: -e.pop('_growth'))
+    pattern_examples['escalator'] = pattern_examples['escalator'][:30]
+
+    pattern_examples['u_shape'].sort(key=lambda e: -(sum(1 for v in e['vals'][:7] if v > 0)))
+    pattern_examples['u_shape'] = pattern_examples['u_shape'][:30]
+
+    pattern_examples['sudden_stop'].sort(key=lambda e: -e['active'])
+    pattern_examples['sudden_stop'] = pattern_examples['sudden_stop'][:30]
+
+    pattern_examples['spike_gone'].sort(key=lambda e: -e['last_amount'])
+    pattern_examples['spike_gone'] = pattern_examples['spike_gone'][:30]
+
+    for pat in ['last_breath', 'irregular_gone']:
+        pattern_examples[pat] = pattern_examples[pat][:30]
+
+    # Build patterns data
+    patterns_data = {}
+    for pat_key in PATTERN_ORDER:
+        meta = PATTERN_META[pat_key]
+        count = pattern_counts[pat_key]
+        pct = f"{count/total_churned*100:.1f}%"
+        exs = pattern_examples[pat_key]
+        avg_last = round(np.mean([e['last_amount'] for e in exs])) if exs else 0
+        total_tickets = sum(sum(e['vals']) for e in exs)
+        patterns_data[pat_key] = {
+            'count': count, 'pct': pct,
+            'name_th': meta['name_th'], 'desc': meta['desc'],
+            'icon': meta['icon'], 'color': meta['color'],
+            'action': meta['action'],
+            'avg_last': avg_last, 'total_tickets': total_tickets,
+            'examples': exs
+        }
+
+    print(f"  Patterns:")
+    for pat_key in PATTERN_ORDER:
+        c = pattern_counts[pat_key]
+        print(f"    {PATTERN_META[pat_key]['icon']} {pat_key}: {c:,} ({c/total_churned*100:.1f}%)")
+
+    # ── PCA 3D from behavioral features ──
+    # Filter for PCA: at least 2 purchases
     active_counts = (raw_matrix > 0).sum(axis=1)
     has_purchase = active_counts >= 2
-    raw_filtered = raw_matrix[has_purchase]
-    churned_filtered = churned[has_purchase].copy()
-    n_filtered = len(raw_filtered)
-    n_excluded = total_churned - n_filtered
-    print(f"  With 2+ purchases: {n_filtered:,} (excluded: {n_excluded:,})")
+    raw_for_pca = raw_matrix[has_purchase]
+    labels_for_pca = np.array(pattern_labels_list)[has_purchase]
+    n_pca = len(raw_for_pca)
+    print(f"\n  PCA input: {n_pca:,} customers (2+ purchases)")
 
-    # Extract & scale features
-    print("  Extracting behavioral features...")
-    features = extract_features(raw_filtered)
+    print("  Extracting features for PCA...")
+    features = extract_features(raw_for_pca)
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(features)
 
-    # K-Means with fixed K
-    k = FIXED_K
-    print(f"\n  Fitting MiniBatchKMeans K={k} on {n_filtered:,} customers...")
-    km = MiniBatchKMeans(n_clusters=k, random_state=42, batch_size=10000, n_init=20, max_iter=500)
-    cluster_labels = km.fit_predict(X_scaled)
+    rng = np.random.RandomState(42)
+    colors_map = {pk: PATTERN_META[pk]['color'] for pk in PATTERN_ORDER}
+    pca_points, centroids_pca, pca_explained, pca_colors = compute_pca_3d(
+        X_scaled, labels_for_pca, PATTERN_ORDER, colors_map, rng
+    )
 
-    # Silhouette score
-    sil = silhouette_score(X_scaled, cluster_labels,
-                           sample_size=min(30000, n_filtered), random_state=42)
-    print(f"  Silhouette score: {sil:.4f}")
-
-    # Sort clusters by size (descending)
-    cluster_sizes = np.bincount(cluster_labels, minlength=k)
-    sorted_indices = np.argsort(-cluster_sizes)
-    remap = np.zeros(k, dtype=int)
-    for new_idx, old_idx in enumerate(sorted_indices):
-        remap[old_idx] = new_idx
-    cluster_labels = remap[cluster_labels]
-    cluster_sizes = cluster_sizes[sorted_indices]
-
-    # Distances for example selection
-    centroids_scaled = km.cluster_centers_[sorted_indices]
-    distances = np.zeros(n_filtered, dtype=np.float32)
-    for c_idx in range(k):
-        mask = cluster_labels == c_idx
-        if mask.sum() > 0:
-            diff = X_scaled[mask] - centroids_scaled[c_idx]
-            distances[mask] = np.sqrt((diff ** 2).sum(axis=1))
-
-    # Label clusters
-    cluster_meta = {}
-    features_per_cluster = {}
-    for c_idx in range(k):
-        mask = cluster_labels == c_idx
-        feat_means = features[mask].mean(axis=0)
-        features_per_cluster[c_idx] = feat_means
-        base_label, name_th, icon, desc, action = label_cluster(feat_means)
-        color = COLORS[c_idx % len(COLORS)]
-        cluster_meta[c_idx] = {
-            'base_label': base_label,
-            'name_th': name_th, 'icon': icon, 'color': color,
-            'desc': f'{icon} {name_th}: {desc}',
-            'action': f'🎯 Action: {action}'
-        }
-
-    # Deduplicate labels
-    cluster_meta = deduplicate_labels(cluster_meta, features_per_cluster)
-
-    print(f"\n  Cluster results (K={k}):")
-    print(f"  {'─'*70}")
-    for c_idx in range(k):
-        meta = cluster_meta[c_idx]
-        count = int(cluster_sizes[c_idx])
-        pct = count / total_churned * 100
-        feat_means = features_per_cluster[c_idx]
-        feat_str = ' | '.join(f'{fn}={fv:.2f}' for fn, fv in zip(FEATURE_NAMES, feat_means))
-        print(f"    {meta['icon']} [{c_idx}] {meta['name_th']}: {count:,} ({pct:.1f}%)")
-        print(f"        {feat_str}")
-
-    # Build examples
-    userNos = churned_filtered['userNo'].values
-    patterns_data = {}
-
-    for c_idx in range(k):
-        mask = cluster_labels == c_idx
-        indices = np.where(mask)[0]
-        dists = distances[indices]
-        sort_order = np.argsort(dists)
-        closest_indices = indices[sort_order[:30]]
-
-        examples = []
-        for idx in closest_indices:
-            raw_vals = raw_filtered[idx].tolist()
-            # Display: 19 pre-churn + 0 for churn period = 20 bars
-            display_start = max(0, n_periods - 19)
-            display_vals = list(raw_vals[display_start:]) + [0]
-            if len(display_vals) < 20:
-                display_vals = [0] * (20 - len(display_vals)) + display_vals
-            display_vals = display_vals[-20:]
-
-            uid = str(userNos[idx])
-            masked = uid[:6] + 'xxx' if uid.startswith('P') else 'P' + uid[:5] + 'xxx'
-            active_vals = [v for v in raw_vals if v > 0]
-            examples.append({
-                'uid': masked,
-                'tenure': n_periods,
-                'active': int(sum(1 for v in raw_vals if v > 0)),
-                'avg': round(float(np.mean(active_vals)), 1) if active_vals else 0,
-                'last_amount': int(raw_vals[-1]),
-                'vals': [int(v) for v in display_vals]
-            })
-
-        meta = cluster_meta[c_idx]
-        count = int(cluster_sizes[c_idx])
-        pat_key = f"cluster_{c_idx}"
-        avg_last = round(np.mean([e['last_amount'] for e in examples])) if examples else 0
-        total_tickets = sum(sum(e['vals']) for e in examples)
-
-        patterns_data[pat_key] = {
-            'count': count,
-            'pct': f"{count/total_churned*100:.1f}%",
-            'name_th': meta['name_th'],
-            'desc': meta['desc'],
-            'icon': meta['icon'],
-            'color': meta['color'],
-            'action': meta['action'],
-            'avg_last': avg_last,
-            'total_tickets': total_tickets,
-            'examples': examples
-        }
-
-    # Add excluded group
-    if n_excluded > 0:
-        pat_key = f"cluster_{k}"
-        patterns_data[pat_key] = {
-            'count': n_excluded,
-            'pct': f"{n_excluded/total_churned*100:.1f}%",
-            'name_th': 'ซื้อครั้งเดียว/ไม่เคยซื้อ',
-            'desc': '⬜ ซื้อครั้งเดียว/ไม่เคยซื้อ: ซื้อแค่ 0-1 งวดจาก 20 งวด',
-            'icon': '⬜',
-            'color': '#D1D5DB',
-            'action': '🎯 Action: ลูกค้าขาจร — ใช้ automated campaign เท่านั้น',
-            'avg_last': 0,
-            'total_tickets': 0,
-            'examples': []
-        }
+    pca_names = [PATTERN_META[pk]['name_th'] for pk in PATTERN_ORDER]
+    pca_icons = [PATTERN_META[pk]['icon'] for pk in PATTERN_ORDER]
+    pca_counts = [pattern_counts[pk] for pk in PATTERN_ORDER]
 
     return {
         'labels': labels,
         'period': period,
         'total_churned': total_churned,
-        'patterns': patterns_data
+        'patterns': patterns_data,
+        'pca3d': {
+            'points': pca_points,
+            'centroids': centroids_pca,
+            'explained': pca_explained,
+            'colors': pca_colors,
+            'names': pca_names,
+            'icons': pca_icons,
+            'counts': pca_counts,
+        }
     }
 
 
