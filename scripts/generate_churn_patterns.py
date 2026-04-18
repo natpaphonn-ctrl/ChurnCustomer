@@ -22,6 +22,7 @@ CHURN_DIR = os.path.join(BASE, 'data', 'churn')
 PRED_DIR = os.path.join(BASE, 'data', 'predictions')
 
 PERIODS = [
+    ('0416', 'Churn_2026_0401_0416.csv'),
     ('0401', 'Churn_2025_0316_0401.csv'),
     ('0316', 'Churn_2025_0301_0316.csv'),
 ]
