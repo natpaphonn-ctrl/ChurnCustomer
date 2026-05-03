@@ -125,16 +125,20 @@ def extract_mmdd(filename):
 
 def find_previous_risk_scores(mmdd):
     """Find previous risk score file matching the END date."""
+    search_dirs = [BASE_DIR, os.path.join(BASE_DIR, "data", "predictions")]
     patterns = [
-        os.path.join(BASE_DIR, f"Churn_RiskScore_Ensemble_*_{mmdd}.csv"),
-        os.path.join(BASE_DIR, f"Churn_RiskScore_*_{mmdd}.csv"),
+        "Churn_RiskScore_Ensemble_*_{mmdd}.csv",
+        "Churn_RiskScore_*_{mmdd}.csv",
     ]
-    for pat in patterns:
-        matches = glob.glob(pat)
-        if matches:
-            # Return most recent
-            matches.sort(key=os.path.getmtime, reverse=True)
-            return matches[0]
+    for d in search_dirs:
+        for pat in patterns:
+            matches = glob.glob(os.path.join(d, pat.format(mmdd=mmdd)))
+            # Filter out Explained and Full variants when searching for the basic risk-score file
+            matches = [m for m in matches if "_Explained_" not in os.path.basename(m)
+                       and "_Full_" not in os.path.basename(m)]
+            if matches:
+                matches.sort(key=os.path.getmtime, reverse=True)
+                return matches[0]
     return None
 
 
@@ -372,17 +376,29 @@ def step_validate(validate_file):
 
     print(f"  Previous scores: {os.path.basename(prev_file)}")
 
-    # Load actual results (contains ONLY customers who bought)
+    # Load actual results — supports two formats:
+    #   1) Old: file contains only customers who bought (use isin)
+    #   2) New: file contains all predicted customers + 'label_continue' (1=kept, 0=churned)
     df_actual = pd.read_csv(validate_file, low_memory=False)
-    actual_buyers = set(df_actual["userNo"].values)
-    print(f"  Actual buyers: {len(actual_buyers):,}")
+    print(f"  Actual file rows: {len(df_actual):,}")
 
-    # Load previous predictions
     df_pred = pd.read_csv(prev_file)
     print(f"  Predicted customers: {len(df_pred):,}")
 
-    # Determine churn: customer in prediction file but NOT in actual file = churned
-    df_pred["actual_churn"] = (~df_pred["userNo"].isin(actual_buyers)).astype(int)
+    if "label_continue" in df_actual.columns:
+        actual_map = dict(zip(df_actual["userNo"].values,
+                              df_actual["label_continue"].astype(int).values))
+        df_pred["actual_churn"] = df_pred["userNo"].map(
+            lambda u: 0 if actual_map.get(u, 0) == 1 else 1
+        ).astype(int)
+        n_buyers = int((df_actual["label_continue"] == 1).sum())
+        n_churned = int((df_actual["label_continue"] == 0).sum())
+        print(f"  Actual buyers (label_continue=1): {n_buyers:,}")
+        print(f"  Actual churned (label_continue=0): {n_churned:,}")
+    else:
+        actual_buyers = set(df_actual["userNo"].values)
+        print(f"  Actual buyers: {len(actual_buyers):,}")
+        df_pred["actual_churn"] = (~df_pred["userNo"].isin(actual_buyers)).astype(int)
 
     # Exclude new customers from evaluation
     eval_mask = df_pred["risk_level"] != "New Customer"
@@ -726,12 +742,14 @@ def step_score(score_file, use_calibrate=False, use_clv=False, use_cluster=False
     if use_cluster and churn_patterns is not None:
         result_df["churn_pattern"] = churn_patterns
 
-    out_risk = os.path.join(BASE_DIR, f"Churn_RiskScore_{year}_{mmdd_score}.csv")
+    out_dir = os.path.join(BASE_DIR, "data", "predictions")
+    os.makedirs(out_dir, exist_ok=True)
+    out_risk = os.path.join(out_dir, f"Churn_RiskScore_{year}_{mmdd_score}.csv")
     result_df.to_csv(out_risk, index=False, encoding="utf-8-sig")
     print(f"    Saved: {os.path.basename(out_risk)}")
 
     # Explained file
-    out_explained = os.path.join(BASE_DIR, f"Churn_RiskScore_Explained_{year}_{mmdd_score}.csv")
+    out_explained = os.path.join(out_dir, f"Churn_RiskScore_Explained_{year}_{mmdd_score}.csv")
     if shap_reasons_all is not None:
         explained_rows = []
         elig_userNos = df.loc[valid, "userNo"].values
